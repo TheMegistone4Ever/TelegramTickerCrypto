@@ -89,7 +89,7 @@ def transform_token(text: str) -> Optional[str]:
     return None
 
 
-def string_to_number(money: str) -> int:
+def string_to_number(money: str) -> float:
     """
     Convert a money string like "$5.3K" or "$6.9M" to an integer
     Examples:
@@ -104,14 +104,22 @@ def string_to_number(money: str) -> int:
         "B": 1000000000
     }
 
-    money = money.replace("$", "").strip()
+    money = money.strip().replace("$", "").replace("%", "").replace(",", "")
 
-    last_char = money[-1].upper()
-    if last_char in MULTIPLIERS:
-        number = float(money[:-1])
-        return int(number * MULTIPLIERS[last_char])
-    else:
-        return int(float(money))
+    if "<" in money:
+        money = money.split("<")[-1]
+
+    try:
+        last_char = money[-1].upper()
+        if last_char in MULTIPLIERS:
+            number = float(money[:-1])
+            return number * MULTIPLIERS[last_char]
+        else:
+            return float(money)
+    except (ValueError, IndexError) as e:
+        print(f"Error processing pair: {e}")
+
+
 
 
 def number_to_string(number: int) -> str:
@@ -131,7 +139,7 @@ def number_to_string(number: int) -> str:
 
     for suffix, value in MULTIPLIERS.items():
         if number >= value:
-            return f"{number / value:.1f}{suffix}"
+            return f"{number / value:.2f}{suffix}"
 
     return str(number)
 
