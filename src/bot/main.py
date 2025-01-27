@@ -2,15 +2,14 @@ from os import getenv
 from pathlib import Path
 
 from dotenv import load_dotenv
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from telebot import TeleBot
 
+from bot.birdeye import check_security_risks, should_post_token
 from bot.utils import (to_minutes, from_minutes, transform_token, string_to_number, number_to_string,
-                       avoid_tg_rate_limit, wait_dynamic_content)
+                       avoid_tg_rate_limit, wait_dynamic_content, setup_chrome_driver)
 
 dotenv_path = Path(r"..\..\.env")
 load_dotenv(dotenv_path=dotenv_path)
@@ -18,15 +17,6 @@ BOT_TOKEN = getenv("BOT_TOKEN")
 channel_id = getenv("CHANNEL_ID")
 user_data_dir = getenv("USER_DATA_DIR")
 bot = TeleBot(BOT_TOKEN)
-
-
-def setup_chrome_driver():
-    """Setup Chrome driver with your existing profile"""
-
-    chrome_options = Options()
-    chrome_options.add_argument(f"user-data-dir={user_data_dir}")
-    chrome_options.add_argument("--profile-directory=Default")
-    return webdriver.Chrome(options=chrome_options)
 
 
 def scrape_dexscreener_data(driver):
@@ -80,6 +70,25 @@ def scrape_dexscreener_data(driver):
 def format_telegram_message(data):
     """Format data for Telegram message"""
 
+    security_info = ""
+    if "security" in data:
+        # Add security warnings if any critical or high risks exist
+        if data["security"]["c"]:
+            security_info += "\n⚠️ Critical Security Risks:"
+            for issue, details in data["security"]["c"].items():
+                if details["b"]:
+                    security_info += f"\n- {issue}: {details['b']}"
+                if details["g"]:
+                    security_info += f"\n  GoPlus: {details['g']}"
+
+        if data["security"]["h"]:
+            security_info += "\n⚠️ High Security Risks:"
+            for issue, details in data["security"]["h"].items():
+                if details["b"]:
+                    security_info += f"\n- {issue}: {details['b']}"
+                if details["g"]:
+                    security_info += f"\n  GoPlus: {details['g']}"
+
     return f"""
 🌱 <strong>Token: </strong><a href="https://dexscreener.com/solana/{data["link"]}">{data["token"]}</a>
 💵 <strong>Price: </strong>${data["price"]}
@@ -92,19 +101,25 @@ def format_telegram_message(data):
 🕛 <strong>6h Change: </strong><em>{data["6h_change"] if data["6h_change"] is not None else "-"}{"%" if data["6h_change"] is not None else ""}</em>
 🕛 <strong>24h Change: </strong><em>{data["24h_change"] if data["24h_change"] is not None else "-"}{"%" if data["24h_change"] is not None else ""}</em>
 💧 <strong>Liquidity: </strong>${number_to_string(data["liquidity"])}
-💰 <strong>Market Cap: </strong>${number_to_string(data["market_cap"])}
+💰 <strong>Market Cap: </strong>${number_to_string(data["market_cap"])}{security_info}
 """
 
 
 def main():
-    driver = setup_chrome_driver()
+    driver = setup_chrome_driver(user_data_dir)
     try:
         pairs_data = scrape_dexscreener_data(driver)
 
         for pair_data in pairs_data:
-            msg = format_telegram_message(pair_data)
-            bot.send_message(channel_id, msg, parse_mode="HTML")
-            avoid_tg_rate_limit()
+            # Check security before posting
+            security_info = check_security_risks(driver, pair_data["token"])
+            pair_data["security"] = security_info
+
+            # Only post if security checks pass
+            if should_post_token(security_info):
+                msg = format_telegram_message(pair_data)
+                bot.send_message(channel_id, msg, parse_mode="HTML")
+                avoid_tg_rate_limit()
 
     finally:
         driver.quit()

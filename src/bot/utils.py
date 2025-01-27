@@ -1,6 +1,8 @@
 from re import search, DOTALL
 from time import sleep
 from typing import Optional
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 
 def to_minutes(time_str: str) -> int:
@@ -144,3 +146,11 @@ def wait_dynamic_content():
     """Wait for dynamic content to load"""
 
     sleep(5)
+
+def setup_chrome_driver(user_data_dir: str):
+    """Setup Chrome driver with your existing profile"""
+
+    chrome_options = Options()
+    chrome_options.add_argument(f"user-data-dir={user_data_dir}")
+    chrome_options.add_argument("--profile-directory=Default")
+    return webdriver.Chrome(options=chrome_options)
