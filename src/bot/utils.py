@@ -1,64 +1,26 @@
 from re import search, DOTALL
 from time import sleep
-from typing import Optional
-from selenium import webdriver
+from typing import Optional, Tuple
+
+from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
+
+MULTIPLIERS = {
+    "K": 1000,
+    "M": 1000000,
+    "B": 1000000000,
+}
 
 
 def to_minutes(time_str: str) -> int:
-    """
-    Convert a time string to total minutes.
-    Supports formats: [Nd] [Nh] [Nm] where N is a number
+    """Convert a time string to total minutes. Supports formats: [Nd] [Nh] [Nm] where N is a number"""
 
-    Args:
-        time_str (str): Time string like "3h", "3m", "3h 59m", "1d 5h 44m"
-
-    Returns:
-        int: Total minutes
-
-    Examples:
-        >>> to_minutes("3h")
-        180
-        >>> to_minutes("45m")
-        45
-        >>> to_minutes("1d 5h 44m")
-        1784
-    """
-
-    time_str = time_str.strip()
-
-    total_minutes = 0
-    parts = time_str.split()
-
-    for part in parts:
-        if part.endswith("d"):
-            total_minutes += int(part[:-1]) * 24 * 60
-        elif part.endswith("h"):
-            total_minutes += int(part[:-1]) * 60
-        elif part.endswith("m"):
-            total_minutes += int(part[:-1])
-
-    return total_minutes
+    return sum(int(part[:-1]) * (24 * 60 if part.endswith("d") else 60 if part.endswith("h") else 1)
+               for part in time_str.split())
 
 
 def from_minutes(minutes: int) -> str:
-    """
-    Convert total minutes to a time string in the format "Nd Nh Nm"
-
-    Args:
-        minutes (int): Total number of minutes
-
-    Returns:
-        str: Formatted time string
-
-    Examples:
-        >>> from_minutes(180)
-        "3h"
-        >>> from_minutes(45)
-        "45m"
-        >>> from_minutes(1784)
-        "1d 5h 44m"
-    """
+    """Convert total minutes to a time string in the format "Nd Nh Nm" """
 
     days = minutes // (24 * 60)
     remaining_minutes = minutes % (24 * 60)
@@ -76,38 +38,18 @@ def from_minutes(minutes: int) -> str:
     return " ".join(parts)
 
 
-def transform_token(text: str) -> Optional[str]:
-    """Transform string using regex approach"""
-
-    text = text.strip()
-
-    pattern = r"(?:#\d+\n)?\??\n(.*?)\n/\n(.*?)\n(.*?)$"
-    match = search(pattern, text, DOTALL)
-    if match:
-        token1, token2, description = match.groups()
-        return f"{token1.split()[-1]}/{token2}: {description}"
-    return None
+def transform_token(text: str) -> Optional[Tuple[str, str]]:
+    return (lambda m: (f"{m.group(1).split()[-1]}/{m.group(2)}", m.group(3)) if m else None
+            )(search(r"(?:#\d+\n)?\??\n(.*?)\n/\n(.*?)\n(.*?)$", text.strip(), DOTALL))
 
 
 def string_to_number(money: str) -> float:
-    """
-    Convert a money string like "$5.3K" or "$6.9M" to an integer
-    Examples:
-    "$5.3K" -> 5300
-    "$6.9M" -> 6900000
-    "$1.2B" -> 1200000000
-    """
-
-    MULTIPLIERS = {
-        "K": 1000,
-        "M": 1000000,
-        "B": 1000000000
-    }
+    """Convert a money string like "$5.3K" or "$6.9M" to an integer"""
 
     money = money.strip().replace("$", "").replace("%", "").replace(",", "")
 
     if "<" in money:
-        money = money.split("<")[-1]
+        money = money.split("<", 1)[-1]
 
     try:
         last_char = money[-1].upper()
@@ -120,45 +62,44 @@ def string_to_number(money: str) -> float:
         print(f"Error processing pair: {e}")
 
 
-
-
 def number_to_string(number: int) -> str:
-    """
-    Convert a number to a formatted money string using the same multipliers
-    Examples:
-    5300 -> "$5.3K"
-    6900000 -> "$6.9M"
-    1200000000 -> "$1.2B"
-    """
+    """Convert a number to a formatted money string using the same multipliers"""
 
-    MULTIPLIERS = {
-        "B": 1000000000,
-        "M": 1000000,
-        "K": 1000
-    }
-
-    for suffix, value in MULTIPLIERS.items():
+    for suffix, value in MULTIPLIERS.items()[::-1]:
         if number >= value:
             return f"{number / value:.2f}{suffix}"
 
     return str(number)
 
 
-def avoid_tg_rate_limit():
+def as_number(comma_number: str) -> int:
+    """Convert a comma-separated number string to an integer"""
+
+    return int(comma_number.replace(",", "").strip())
+
+
+def get_solana_address(dex_solana_link: str, sep="https://dexscreener.com/solana/") -> str:
+    """Extract Solana address from DEX Solana link"""
+
+    return dex_solana_link.split(sep, 1)[-1]
+
+
+def avoid_tg_rate_limit(seconds=2):
     """Avoid hitting Telegram's rate limits"""
 
-    sleep(2)
+    sleep(seconds)
 
 
-def wait_dynamic_content():
+def wait_dynamic_content(seconds=5):
     """Wait for dynamic content to load"""
 
-    sleep(5)
+    sleep(seconds)
 
-def setup_chrome_driver(user_data_dir: str):
+
+def setup_chrome_driver(user_data_dir: str, profile_dir="Default") -> Chrome:
     """Setup Chrome driver with your existing profile"""
 
     chrome_options = Options()
     chrome_options.add_argument(f"user-data-dir={user_data_dir}")
-    chrome_options.add_argument("--profile-directory=Default")
-    return webdriver.Chrome(options=chrome_options)
+    chrome_options.add_argument(f"--profile-directory={profile_dir}")
+    return Chrome(options=chrome_options)
