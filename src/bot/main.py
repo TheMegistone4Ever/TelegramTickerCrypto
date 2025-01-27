@@ -19,10 +19,9 @@ user_data_dir = getenv("USER_DATA_DIR")
 bot = TeleBot(BOT_TOKEN)
 
 
-def scrape_dexscreener_data(driver):
+def scrape_dexscreener_data(driver, url="https://dexscreener.com/solana?rankBy=pairAge&order=asc&minLiq=2000&minAge=3"):
     """Scrape data from DexScreener"""
 
-    url = "https://dexscreener.com/solana?rankBy=pairAge&order=asc&minLiq=2000&minAge=3"
     driver.get(url)
 
     WebDriverWait(driver, 20).until(
@@ -34,13 +33,15 @@ def scrape_dexscreener_data(driver):
     pairs = driver.find_elements(By.CSS_SELECTOR, "a.ds-dex-table-row")
 
     pairs_data = []
-    for pair in pairs[1:]:
+    for pair in pairs:
         try:
             columns = pair.find_elements(By.CSS_SELECTOR, "div.ds-table-data-cell")
             if len(columns) < 13:
                 continue
+            token, description = transform_token(columns[0].text)
             pair_data = {
-                "token": transform_token(columns[0].text),
+                "token": token,
+                "description": description,
                 "address": get_solana_address(pair.get_attribute("href")),
                 "price": string_to_number(columns[1].text),
                 "age": to_minutes(columns[2].text),
@@ -165,13 +166,13 @@ def calculate_token_score(security_data):
     return max(0, min(100, score / max_score * 100))
 
 
-def format_telegram_message(data):
+def format_telegram_message(data, threshold=98):
     """Format data for a Telegram message with security score"""
 
     security_info, score_text = "", ""
     if "security" in data:
         security_score = calculate_token_score(data["security"])
-        score_text = f"\n{"🟢" if security_score >= 98 else "🔴"} {security_score:.2f}%"
+        score_text = f"\n{"🟢" if security_score >= threshold else "🔴"} {security_score:.2f}%"
 
         if data["security"]["c"]:
             security_info += "\n⚠️⚠️ <b>Critical Security Risks:</b> ⚠️⚠️"
@@ -190,7 +191,7 @@ def format_telegram_message(data):
                     security_info += f"\n<u>GoPlus - </u> {issue}: {details['g']}"
 
     return f"""
-🌱 <b>Token: </b><a href="https://dexscreener.com/solana/{data["address"]}">{data["token"]}</a>
+🌱 <b>Token: </b><a href="https://dexscreener.com/solana/{data["address"]}">{data["token"]}: {data["description"]}</a>
 💵 <b>Price: </b>${number_to_string(data["price"])}
 🕛 <b>Age: </b>{from_minutes(data["age"])}
 🛒 <b>Sells: </b>{data["sells"]}
@@ -217,10 +218,9 @@ def main():
         pairs_data = scrape_dexscreener_data(driver)
 
         for pair_data in pairs_data:
-            security_info = check_security_risks(driver, pair_data["token"].split(":", 1)[0])
-            pair_data["security"] = security_info
+            pair_data["security"] = check_security_risks(driver, pair_data["token"])
 
-            if should_post_token(security_info):
+            if should_post_token(pair_data["security"]):
                 msg = format_telegram_message(pair_data)
                 bot.send_message(channel_id, msg, parse_mode="HTML")
                 avoid_tg_rate_limit()
