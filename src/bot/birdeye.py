@@ -104,13 +104,13 @@ def check_security_risks(driver, token_name: str, url="https://www.birdeye.so/")
         }
 
 
-def should_post_token(security_info: Dict) -> bool:
+def should_post_token(security_data: Dict) -> bool:
     """
     Determine if a token should be posted based on security information.
     Add your specific security criteria here.
     """
 
-    return security_info["score"] > .9
+    return security_data["score"] > .9
 
 
 if __name__ == "__main__":
