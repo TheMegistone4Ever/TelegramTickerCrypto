@@ -96,6 +96,12 @@ def wait_dynamic_content(seconds=5):
     sleep(seconds)
 
 
+def wait_static_content(seconds=2):
+    """Wait for static content to load"""
+
+    sleep(seconds)
+
+
 def setup_chrome_driver(user_data_dir: str, profile_dir="Default") -> Chrome:
     """Setup Chrome driver with your existing profile"""
 
