@@ -172,9 +172,8 @@ def format_telegram_message(data, threshold=98):
     security_info, score_text = "", ""
 
     if "security" in data:
-        security_score = calculate_token_score(data["security"])
-        score_emoji = "🟢" if security_score >= threshold else "🔴"
-        score_text = f"{score_emoji} {security_score:.2f}%"
+        score_emoji = "🟢" if data["security"]["score"] >= threshold else "🔴"
+        score_text = f"{score_emoji} {data["security"]["score"]:.2f}%"
 
         severities = (
             ("c", "Critical", "⚠️⚠️"),
@@ -228,6 +227,7 @@ def main():
 
         for pair_data in pairs_data:
             pair_data["security"] = check_security_risks(driver, pair_data["token"])
+            pair_data["security"]["score"] = calculate_token_score(pair_data["security"])
 
             if should_post_token(pair_data["security"]):
                 msg = format_telegram_message(pair_data)

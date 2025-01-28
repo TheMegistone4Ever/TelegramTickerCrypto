@@ -109,19 +109,8 @@ def should_post_token(security_info: Dict) -> bool:
     Determine if a token should be posted based on security information.
     Add your specific security criteria here.
     """
-    # # Example criteria - customize based on your needs
-    # if security_info.get("error"):  # If there was an error checking security
-    #     return False
-    #
-    # if security_info["c"]:  # If any critical issues
-    #     return False
-    #
-    # # Count high risk issues
-    # high_risk_count = len(security_info["h"])
-    # if high_risk_count > 2:  # If more than 2 high risk issues
-    #     return False
 
-    return True
+    return security_info["score"] > .9
 
 
 if __name__ == "__main__":
