@@ -65,7 +65,7 @@ def string_to_number(money: str) -> float:
 def number_to_string(number: int) -> str:
     """Convert a number to a formatted money string using the same multipliers"""
 
-    for suffix, value in MULTIPLIERS.items()[::-1]:
+    for suffix, value in list(MULTIPLIERS.items())[::-1]:
         if number >= value:
             return f"{number / value:.2f}{suffix}"
 
