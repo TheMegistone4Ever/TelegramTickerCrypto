@@ -170,44 +170,53 @@ def format_telegram_message(data, threshold=98):
     """Format data for a Telegram message with security score"""
 
     security_info, score_text = "", ""
+
     if "security" in data:
         security_score = calculate_token_score(data["security"])
-        score_text = f"\n{"🟢" if security_score >= threshold else "🔴"} {security_score:.2f}%"
+        score_emoji = "🟢" if security_score >= threshold else "🔴"
+        score_text = f"{score_emoji} {security_score:.2f}%"
 
-        if data["security"]["c"]:
-            security_info += "\n⚠️⚠️ <b>Critical Security Risks:</b> ⚠️⚠️"
-            for issue, details in data["security"]["c"].items():
-                if details["b"]:
-                    security_info += f"\n<u>BirdEye</u> - {issue}: {details["b"]}"
-                if details["g"]:
-                    security_info += f"\n<u>GoPlus</u> - {issue}: {details["g"]}"
+        severities = (
+            ("c", "Critical", "⚠️⚠️"),
+            ("h", "High", "⚠️"),
+            ("m", "Medium", "⚡️"),
+            ("n", "Low", "🍏"),
+        )
 
-        if data["security"]["h"]:
-            security_info += "\n⚠️ <b>High Security Risks:</b> ⚠️"
-            for issue, details in data["security"]["h"].items():
-                if details["b"]:
-                    security_info += f"\n<u>BirdEye</u> - {issue}: {details["b"]}"
-                if details["g"]:
-                    security_info += f"\n<u>GoPlus</u> - {issue}: {details["g"]}"
+        for severity_key, severity_label, emoji in severities:
+            if data["security"].get(severity_key):
+                security_info += f"\n{emoji} <b>{severity_label} Security Risks:</b> {emoji}"
+                for issue, details in data["security"][severity_key].items():
+                    for source_key, source_name in [("b", "BirdEye"), ("g", "GoPlus")]:
+                        if details.get(source_key):
+                            security_info += f"\n<u>{source_name}</u> - {issue}: {details[source_key]}"
+
+    def format_change(value):
+        return f"{number_to_string(value)}%" if value is not None else "-"
+
+    time_frames = [
+        ("5m", "5m_change"),
+        ("1h", "1h_change"),
+        ("6h", "6h_change"),
+        ("24h", "24h_change")
+    ]
+    change_lines = [f"🕛 <b>{label} Change:</b> <i>{format_change(data.get(key))}</i>"
+                    for label, key in time_frames]
 
     return f"""
-🌱 <b>Token: </b><a href="https://dexscreener.com/solana/{data["address"]}">{data["token"]}: {data["description"]}</a>
-💵 <b>Price: </b>${number_to_string(data["price"])}
-🕛 <b>Age: </b>{from_minutes(data["age"])}
-🛒 <b>Sells: </b>{data["sells"]}
-📊 <b>Volume: </b>${number_to_string(data["volume"])}
-👥 <b>Makers: </b>{data["makers"]}
-🕛 <b>5m Change: </b><i>{number_to_string(data["5m_change"]) if data["5m_change"] is not None else "-"}{"%" if data["5m_change"] is not None else ""}</i>
-🕛 <b>1h Change: </b><i>{number_to_string(data["1h_change"]) if data["1h_change"] is not None else "-"}{"%" if data["1h_change"] is not None else ""}</i>
-🕛 <b>6h Change: </b><i>{number_to_string(data["6h_change"]) if data["6h_change"] is not None else "-"}{"%" if data["6h_change"] is not None else ""}</i>
-🕛 <b>24h Change: </b><i>{number_to_string(data["24h_change"]) if data["24h_change"] is not None else "-"}{"%" if data["24h_change"] is not None else ""}</i>
-💧 <b>Liquidity: </b>${number_to_string(data["liquidity"])}
-💰 <b>Market Cap: </b>${number_to_string(data["market_cap"])}
+🌱 <b>Token:</b> <a href="https://dexscreener.com/solana/{data["address"]}">{data["token"]}: {data["description"]}</a>
+💵 <b>Price:</b> ${number_to_string(data["price"])}
+🕛 <b>Age:</b> {from_minutes(data["age"])}
+🛒 <b>Sells:</b> {data["sells"]}
+📊 <b>Volume:</b> ${number_to_string(data["volume"])}
+👥 <b>Makers:</b> {data["makers"]}
+{"\n".join(change_lines)}
+💧 <b>Liquidity:</b> ${number_to_string(data["liquidity"])}
+💰 <b>Market Cap:</b> ${number_to_string(data["market_cap"])}
 
 📊 <b>Models Score:</b>
 Model 1: {score_text}
 Model 2: <i>currently not working</i>
-
 {security_info}
 """
 
