@@ -69,78 +69,78 @@ def calculate_token_score(security_data):
 
     SCORING_WEIGHTS = {
         "c": {
-            "airdrop_scam": {"B": -0.5, "G": -0.3},
-            "fake_token": {"B": -0.5, "G": -0.3},
-            "honeypot": {"B": -0.5, "G": -0.3},
-            "owner_can_change_balance": {"B": -0.4, "G": -0.2},
-            "ownership_renounced": {"B": -0.3, "G": -0.3},
-            "self_destruct": {"B": -0.5, "G": -0.3}
+            "airdrop_scam": {"b": -0.5, "g": -0.3},
+            "fake_token": {"b": -0.5, "g": -0.3},
+            "honeypot": {"b": -0.5, "g": -0.3},
+            "owner_can_change_balance": {"b": -0.4, "g": -0.2},
+            "ownership_renounced": {"b": -0.3, "g": -0.3},
+            "self_destruct": {"b": -0.5, "g": -0.3}
         },
         "h": {
-            "assigned_address'_slippage_is_modifiable": {"B": -0.2, "G": -0.1},
-            "cannot_be_bought": {"B": -0.3, "G": -0.2},
-            "cannot_sell_all": {"B": -0.3, "G": -0.2},
-            "dex_info": {"B": -0.1, "G": -0.1},
-            "mintable": {"B": -0.2, "G": -0.2},
-            "modifiable_anti_whale": {"B": -0.2, "G": -0.1},
-            "open_source": {"B": -0.2, "G": -0.2},
-            "proxy_contract": {"B": -0.2, "G": -0.1},
-            "token_holder_number": {"B": -0.1, "G": -0.1},
-            "trading_with_cooldowntime": {"B": -0.2, "G": -0.1},
-            "trust_list": {"B": -0.2, "G": -0.2},
-            "with_hidden_owner": {"B": -0.2, "G": -0.1},
-            "blacklist": {"B": -0.2, "G": -0.1},
-            "buy_tax": {"B": -0.1, "G": -0.1},
-            "freezable": {"B": -0.2, "G": -0.1},
-            "gas_abuse": {"B": -0.2, "G": -0.1},
-            "max_fee": {"B": -0.1, "G": -0.1},
-            "other_potential_risks": {"B": -0.1, "G": -0.1},
-            "sell_tax": {"B": -0.1, "G": -0.1},
-            "transfer_fees": {"B": -0.1, "G": -0.1},
-            "transfer_fees_enable": {"B": -0.1, "G": -0.1},
-            "extreme_fee_test": {"B": -0.2, "G": -0.1},
-            "top10_lp_token_holders_info": {"B": -0.2, "G": -0.2},
-            "inadequate_liquidity_test": {"B": -0.2, "G": -0.1},
-            "inadequate_ininitial_liquidity_test": {"B": -0.2, "G": -0.1},
-            "take_back_ownership": {"B": -0.2, "G": -0.1},
-            "token_percentage_of_creator": {"B": -0.1, "G": -0.1},
-            "token_percentage_of_owner": {"B": -0.1, "G": -0.1},
-            "ua_percentage": {"B": -0.1, "G": -0.1},
-            "jupiter_strict_list": {"B": -0.2, "G": -0.0},
-            "top_holders_percentage": {"B": -0.2, "G": -0.2}
+            "assigned_address'_slippage_is_modifiable": {"b": -0.2, "g": -0.1},
+            "cannot_be_bought": {"b": -0.3, "g": -0.2},
+            "cannot_sell_all": {"b": -0.3, "g": -0.2},
+            "dex_info": {"b": -0.1, "g": -0.1},
+            "mintable": {"b": -0.2, "g": -0.2},
+            "modifiable_anti_whale": {"b": -0.2, "g": -0.1},
+            "open_source": {"b": -0.2, "g": -0.2},
+            "proxy_contract": {"b": -0.2, "g": -0.1},
+            "token_holder_number": {"b": -0.1, "g": -0.1},
+            "trading_with_cooldowntime": {"b": -0.2, "g": -0.1},
+            "trust_list": {"b": -0.2, "g": -0.2},
+            "with_hidden_owner": {"b": -0.2, "g": -0.1},
+            "blacklist": {"b": -0.2, "g": -0.1},
+            "buy_tax": {"b": -0.1, "g": -0.1},
+            "freezable": {"b": -0.2, "g": -0.1},
+            "gas_abuse": {"b": -0.2, "g": -0.1},
+            "max_fee": {"b": -0.1, "g": -0.1},
+            "other_potential_risks": {"b": -0.1, "g": -0.1},
+            "sell_tax": {"b": -0.1, "g": -0.1},
+            "transfer_fees": {"b": -0.1, "g": -0.1},
+            "transfer_fees_enable": {"b": -0.1, "g": -0.1},
+            "extreme_fee_test": {"b": -0.2, "g": -0.1},
+            "top10_lp_token_holders_info": {"b": -0.2, "g": -0.2},
+            "inadequate_liquidity_test": {"b": -0.2, "g": -0.1},
+            "inadequate_ininitial_liquidity_test": {"b": -0.2, "g": -0.1},
+            "take_back_ownership": {"b": -0.2, "g": -0.1},
+            "token_percentage_of_creator": {"b": -0.1, "g": -0.1},
+            "token_percentage_of_owner": {"b": -0.1, "g": -0.1},
+            "ua_percentage": {"b": -0.1, "g": -0.1},
+            "jupiter_strict_list": {"b": -0.2, "g": -0.0},
+            "top_holders_percentage": {"b": -0.2, "g": -0.2}
         },
         "m": {
-            "mutable_info": {"B": -0.1, "G": -0.1},
-            "whitelist": {"B": -0.1, "G": -0.1},
-            "with_external_call": {"B": -0.1, "G": -0.1},
-            "liquidity_locked_or_liquidity_burned": {"B": -0.1, "G": -0.1},
-            "creator_high_lp_balance_test": {"B": -0.1, "G": -0.1},
-            "owner_high_lp_balance_test": {"B": -0.1, "G": -0.1}
+            "mutable_info": {"b": -0.1, "g": -0.1},
+            "whitelist": {"b": -0.1, "g": -0.1},
+            "with_external_call": {"b": -0.1, "g": -0.1},
+            "liquidity_locked_or_liquidity_burned": {"b": -0.1, "g": -0.1},
+            "creator_high_lp_balance_test": {"b": -0.1, "g": -0.1},
+            "owner_high_lp_balance_test": {"b": -0.1, "g": -0.1}
         },
         "n": {
-            "anti_whale": {"B": -0.05, "G": -0.05},
-            "token_total_supply": {"B": -0.0, "G": -0.0},
-            "note": {"B": -0.0, "G": -0.0},
-            "fee_withdrawer": {"B": -0.0, "G": -0.0},
-            "freeze_authority": {"B": -0.0, "G": -0.0},
-            "transfer_fee_config_authority": {"B": -0.0, "G": -0.0},
-            "liquidity_burned": {"B": -0.05, "G": -0.05},
-            "liquidity_locked": {"B": -0.05, "G": -0.05},
-            "lp_holders_count": {"B": -0.0, "G": -0.0},
-            "lp_token_total_supply": {"B": -0.0, "G": -0.0},
-            "creator_address": {"B": -0.0, "G": -0.0},
-            "creator_balance": {"B": -0.0, "G": -0.0},
-            "first_mint_time": {"B": -0.0, "G": -0.0},
-            "first_mint_tx": {"B": -0.0, "G": -0.0},
-            "owner_address": {"B": -0.0, "G": -0.0},
-            "owner_balance": {"B": -0.0, "G": -0.0},
-            "ua_balance": {"B": -0.0, "G": -0.0},
-            "update_authority_(ua)": {"B": -0.0, "G": -0.0}
+            "anti_whale": {"b": -0.05, "g": -0.05},
+            "token_total_supply": {"b": -0.0, "g": -0.0},
+            "note": {"b": -0.0, "g": -0.0},
+            "fee_withdrawer": {"b": -0.0, "g": -0.0},
+            "freeze_authority": {"b": -0.0, "g": -0.0},
+            "transfer_fee_config_authority": {"b": -0.0, "g": -0.0},
+            "liquidity_burned": {"b": -0.05, "g": -0.05},
+            "liquidity_locked": {"b": -0.05, "g": -0.05},
+            "lp_holders_count": {"b": -0.0, "g": -0.0},
+            "lp_token_total_supply": {"b": -0.0, "g": -0.0},
+            "creator_address": {"b": -0.0, "g": -0.0},
+            "creator_balance": {"b": -0.0, "g": -0.0},
+            "first_mint_time": {"b": -0.0, "g": -0.0},
+            "first_mint_tx": {"b": -0.0, "g": -0.0},
+            "owner_address": {"b": -0.0, "g": -0.0},
+            "owner_balance": {"b": -0.0, "g": -0.0},
+            "ua_balance": {"b": -0.0, "g": -0.0},
+            "update_authority_(ua)": {"b": -0.0, "g": -0.0}
         }
     }
 
     max_score = sum(
-        abs(weight["B"]) + abs(weight["G"])
+        abs(weight["b"]) + abs(weight["g"])
         for category in SCORING_WEIGHTS.values()
         for weight in category.values()
     )
@@ -178,17 +178,17 @@ def format_telegram_message(data, threshold=98):
             security_info += "\n⚠️⚠️ <b>Critical Security Risks:</b> ⚠️⚠️"
             for issue, details in data["security"]["c"].items():
                 if details["b"]:
-                    security_info += f"\n<u>BirdEye - </u> {issue}: {details['b']}"
+                    security_info += f"\n<u>BirdEye</u> - {issue}: {details["b"]}"
                 if details["g"]:
-                    security_info += f"\n<u>GoPlus - </u> {issue}: {details['g']}"
+                    security_info += f"\n<u>GoPlus</u> - {issue}: {details["g"]}"
 
         if data["security"]["h"]:
             security_info += "\n⚠️ <b>High Security Risks:</b> ⚠️"
             for issue, details in data["security"]["h"].items():
                 if details["b"]:
-                    security_info += f"\n<u>BirdEye - </u> {issue}: {details['b']}"
+                    security_info += f"\n<u>BirdEye</u> - {issue}: {details["b"]}"
                 if details["g"]:
-                    security_info += f"\n<u>GoPlus - </u> {issue}: {details['g']}"
+                    security_info += f"\n<u>GoPlus</u> - {issue}: {details["g"]}"
 
     return f"""
 🌱 <b>Token: </b><a href="https://dexscreener.com/solana/{data["address"]}">{data["token"]}: {data["description"]}</a>
