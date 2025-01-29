@@ -1,59 +1,64 @@
 from os import getenv
 from pathlib import Path
+from random import uniform
+from time import time
 from typing import Dict
 
 from dotenv import load_dotenv
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions as ec
-from selenium.webdriver.support.ui import WebDriverWait
-
-from bot.utils import setup_chrome_driver, wait_static_content
+from seleniumbase import SB
 
 dotenv_path = Path(r"..\..\.env")
 load_dotenv(dotenv_path=dotenv_path)
 user_data_dir = getenv("USER_DATA_DIR")
 
 
-def check_security_risks(driver, token_name: str, url="https://www.birdeye.so/") -> Dict:
-    """Check security risks for a given token on Birdeye."""
+def check_security_risks(sb, token_name: str, url="https://www.birdeye.so/") -> Dict:
+    """Check security risks for a given token on Birdeye using SeleniumBase."""
 
     try:
-        driver.get(url)
+        sb.driver.get(url)
 
-        search_area = WebDriverWait(driver, 20).until(
-            ec.element_to_be_clickable((By.CSS_SELECTOR,
-                                        "div.flex.grow.justify-center.space-x-2.lg\\:space-x-4 div"))
-        )
-        search_area.click()
+        sb.driver.execute_script("document.body.style.zoom='50%'")
+        sb.driver.set_window_size(1920, 1080)
 
-        wait_static_content()
+        sb.click(r"div.w-full.bg-transparent > span")
+        sb.sleep(2)
 
-        search_input = WebDriverWait(driver, 20).until(
-            ec.presence_of_element_located((By.CSS_SELECTOR,
-                                            "div.border-b.bg-neutral-50 input"))
-        )
-        search_input.send_keys(token_name)
+        search_input = sb.wait_for_element("div.border-b.bg-neutral-50 input", timeout=10)
 
-        wait_static_content()
+        for char in token_name:
+            search_input.send_keys(char)
+            sb.sleep(uniform(0.05, 0.1))
 
         search_input.send_keys(Keys.RETURN)
 
-        WebDriverWait(driver, 20).until(
-            lambda driver: "token" in driver.current_url
-        )
-        security_url = driver.current_url + "&tab=security"
-        driver.get(security_url)
+        start_time = time()
+        while "token" not in sb.get_current_url():
+            sb.sleep(.5)
+            if time() - start_time > 3:
+                print("Timeout: URL did not change to include 'token'")
+                break
 
-        security_content = WebDriverWait(driver, 20).until(
-            ec.presence_of_element_located((By.CSS_SELECTOR, "div.mt-4.space-y-1"))
-        )
+        if "token" not in sb.get_current_url():
+            sb.wait_for_element_clickable("table tbody tr:first-child td:first-child a", timeout=3)
+            sb.click("table tbody tr:first-child td:first-child a")
+            sb.sleep(2)
+
+        security_url = sb.get_current_url() + "&tab=security"
+        sb.driver.get(security_url)
+
+        security_content = sb.wait_for_element("div.mt-4.space-y-1")
+
+        sb.driver.execute_script(
+            "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});", security_content)
 
         security_data = {
             "c": {},
             "h": {},
             "m": {},
-            "n": {}
+            "n": {},
         }
 
         risk_sections = security_content.find_elements(By.CLASS_NAME, "divide-y")
@@ -79,10 +84,10 @@ def check_security_risks(driver, token_name: str, url="https://www.birdeye.so/")
                 if "hidden" in item.get_attribute("class"):
                     continue
 
-                title_elem = item.find_element(By.CSS_SELECTOR, "div.flex-1")
+                title_elem = item.find_element(By.CSS_SELECTOR, "div.flex.gap-1 > div.flex-1")
                 title = title_elem.text.lower()
 
-                cells = item.find_elements(By.CSS_SELECTOR, "div.flex.justify-center")
+                cells = item.find_elements(By.CSS_SELECTOR, "div.flex.px-2")
                 birdeye_data = None if cells[0].text == "N/A" else cells[0].text
                 goplus_data = None if cells[1].text == "N/A" else cells[1].text
 
@@ -114,14 +119,14 @@ def should_post_token(security_data: Dict) -> bool:
 
 
 if __name__ == "__main__":
-    driver = setup_chrome_driver(user_data_dir)
-    try:
-        test_token = "SOL/USDC"
-        security_info = check_security_risks(driver, test_token)
-        print(f"Security info for {test_token}:")
-        print(security_info)
-        print(f"Should post: {should_post_token(security_info)}")
-    except Exception as e:
-        print(f"Error when checking security: {str(e)}")
-    finally:
-        driver.quit()
+    with SB(uc=True, test=True, headless=False, user_data_dir=user_data_dir) as sb:
+        try:
+            test_token = "SOL/USDC"
+            security_info = check_security_risks(sb, test_token)
+            print(f"Security info for {test_token}:")
+            print(security_info)
+            print(f"Should post: {should_post_token(security_info)}")
+        except Exception as e:
+            print(f"Error when checking security: {str(e)}")
+        finally:
+            pass
