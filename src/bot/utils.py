@@ -2,9 +2,6 @@ from re import search, DOTALL
 from time import sleep
 from typing import Optional, Tuple
 
-from selenium.webdriver import Chrome
-from selenium.webdriver.chrome.options import Options
-
 MULTIPLIERS = {
     "K": 1000,
     "M": 1000000,
@@ -60,6 +57,7 @@ def string_to_number(money: str) -> float:
             return float(money)
     except (ValueError, IndexError) as e:
         print(f"Error processing pair: {e}")
+        return 0
 
 
 def number_to_string(number: int) -> str:
@@ -88,24 +86,3 @@ def avoid_tg_rate_limit(seconds=2):
     """Avoid hitting Telegram's rate limits"""
 
     sleep(seconds)
-
-
-def wait_dynamic_content(seconds=5):
-    """Wait for dynamic content to load"""
-
-    sleep(seconds)
-
-
-def wait_static_content(seconds=2):
-    """Wait for static content to load"""
-
-    sleep(seconds)
-
-
-def setup_chrome_driver(user_data_dir: str, profile_dir="Default") -> Chrome:
-    """Setup Chrome driver with your existing profile"""
-
-    chrome_options = Options()
-    chrome_options.add_argument(f"user-data-dir={user_data_dir}")
-    chrome_options.add_argument(f"--profile-directory={profile_dir}")
-    return Chrome(options=chrome_options)
