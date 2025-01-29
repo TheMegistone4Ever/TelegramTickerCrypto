@@ -3,13 +3,12 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as ec
-from selenium.webdriver.support.ui import WebDriverWait
+from seleniumbase import SB
 from telebot import TeleBot
 
 from bot.birdeye import check_security_risks, should_post_token
 from bot.utils import (to_minutes, from_minutes, transform_token, string_to_number, number_to_string,
-                       avoid_tg_rate_limit, wait_dynamic_content, setup_chrome_driver, as_number, get_solana_address)
+                       avoid_tg_rate_limit, as_number, get_solana_address)
 
 dotenv_path = Path(r"..\..\.env")
 load_dotenv(dotenv_path=dotenv_path)
@@ -17,27 +16,30 @@ BOT_TOKEN = getenv("BOT_TOKEN")
 channel_id = getenv("CHANNEL_ID")
 user_data_dir = getenv("USER_DATA_DIR")
 bot = TeleBot(BOT_TOKEN)
+MAX_ON_PAGE = 100
 
 
-def scrape_dexscreener_data(driver, url="https://dexscreener.com/solana?rankBy=pairAge&order=asc&minLiq=2000&minAge=3"):
-    """Scrape data from DexScreener"""
+def scrape_dexscreener_data(sb, url="https://dexscreener.com/solana?rankBy=pairAge&order=asc&minLiq=2000&minAge=3"):
+    """Scrape data from Dexscreener using SeleniumBase"""
 
-    driver.get(url)
+    sb.driver.get(url)
 
-    WebDriverWait(driver, 20).until(
-        ec.presence_of_element_located((By.CLASS_NAME, "ds-dex-table-th"))
-    )
+    sb.wait_for_element("div.ds-dex-table-th", timeout=20)
+    sb.sleep(5)
+    sb.wait_for_element("a.ds-dex-table-row", timeout=10)
 
-    wait_dynamic_content()
-
-    pairs = driver.find_elements(By.CSS_SELECTOR, "a.ds-dex-table-row")
-
-    pairs_data = []
-    for pair in pairs:
+    pairs_data = set()
+    for i in range(MAX_ON_PAGE):
         try:
+            pair = sb.find_elements("a.ds-dex-table-row")[i]
             columns = pair.find_elements(By.CSS_SELECTOR, "div.ds-table-data-cell")
+
+            if not columns:
+                continue
+
             if len(columns) < 13:
                 continue
+
             token, description = transform_token(columns[0].text)
             pair_data = {
                 "token": token,
@@ -56,7 +58,7 @@ def scrape_dexscreener_data(driver, url="https://dexscreener.com/solana?rankBy=p
                 "liquidity": string_to_number(columns[11].text),
                 "market_cap": string_to_number(columns[12].text),
             }
-            pairs_data.append(pair_data)
+            pairs_data.add(pair_data)
         except (ValueError, IndexError) as e:
             print(f"Error processing pair: {e}")
             continue
@@ -221,21 +223,19 @@ Model 2: <i>currently not working</i>
 
 
 def main():
-    driver = setup_chrome_driver(user_data_dir)
-    try:
-        pairs_data = scrape_dexscreener_data(driver)
+    with SB(uc=True, headless=False) as sb:
+        try:
+            pairs_data = scrape_dexscreener_data(sb)
+            for pair_data in pairs_data:
+                pair_data["security"] = check_security_risks(sb, pair_data["token"])
+                pair_data["security"]["score"] = calculate_token_score(pair_data["security"])
 
-        for pair_data in pairs_data:
-            pair_data["security"] = check_security_risks(driver, pair_data["token"])
-            pair_data["security"]["score"] = calculate_token_score(pair_data["security"])
-
-            if should_post_token(pair_data["security"]):
-                msg = format_telegram_message(pair_data)
-                bot.send_message(channel_id, msg, parse_mode="HTML")
-                avoid_tg_rate_limit()
-
-    finally:
-        driver.quit()
+                if should_post_token(pair_data["security"]):
+                    msg = format_telegram_message(pair_data)
+                    bot.send_message(channel_id, msg, parse_mode="HTML")
+                    avoid_tg_rate_limit()
+        finally:
+            pass
 
 
 if __name__ == "__main__":
