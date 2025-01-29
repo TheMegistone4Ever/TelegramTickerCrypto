@@ -58,7 +58,7 @@ def scrape_dexscreener_data(sb, url="https://dexscreener.com/solana?rankBy=pairA
                 "liquidity": string_to_number(columns[11].text),
                 "market_cap": string_to_number(columns[12].text),
             }
-            pairs_data.add(pair_data)
+            pairs_data.append(pair_data)
         except (ValueError, IndexError) as e:
             print(f"Error processing pair: {e}")
             continue
