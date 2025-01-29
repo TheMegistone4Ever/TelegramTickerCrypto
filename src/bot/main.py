@@ -28,7 +28,7 @@ def scrape_dexscreener_data(sb, url="https://dexscreener.com/solana?rankBy=pairA
     sb.sleep(5)
     sb.wait_for_element("a.ds-dex-table-row", timeout=10)
 
-    pairs_data = set()
+    pairs_data = list()
     for i in range(MAX_ON_PAGE):
         try:
             pair = sb.find_elements("a.ds-dex-table-row")[i]
