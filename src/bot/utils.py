@@ -1,12 +1,10 @@
 from re import search, DOTALL
-from time import sleep
+from time import sleep, time
 from typing import Optional, Tuple
 
-MULTIPLIERS = {
-    "K": 1000,
-    "M": 1000000,
-    "B": 1000000000,
-}
+from bot.models import Multiplier
+from models import PairData, SecurityData, RiskLevel, TimeFrame
+from scoring_config import SCORING_CONFIG
 
 
 def to_minutes(time_str: str) -> int:
@@ -36,12 +34,19 @@ def from_minutes(minutes: int) -> str:
 
 
 def transform_token(text: str) -> Optional[Tuple[str, str]]:
-    return (lambda m: (f"{m.group(1).split()[-1]}/{m.group(2)}", m.group(3)) if m else None
-            )(search(r"(?:#\d+\n)?\??\n(.*?)\n/\n(.*?)\n(.*?)$", text.strip(), DOTALL))
+    """Transforms token text into a tuple of token and description."""
+
+    match = search(r"(?:#\d+\n)?\??\n(.*?)\n/\n(.*?)\n(.*?)$", text.strip(), DOTALL)
+    if match:
+        token_parts = match.group(1).split()
+        token = f"{token_parts[-1]}/{match.group(2)}" if token_parts else ""
+        description = match.group(3)
+        return token, description
+    return None
 
 
 def string_to_number(money: str) -> float:
-    """Convert a money string like "$5.3K" or "$6.9M" to an integer"""
+    """Convert a money string like "$5.3K" or "$6.9M" to a float."""
 
     money = money.strip().replace("$", "").replace("%", "").replace(",", "")
 
@@ -49,40 +54,146 @@ def string_to_number(money: str) -> float:
         money = money.split("<", 1)[-1]
 
     try:
-        last_char = money[-1].upper()
-        if last_char in MULTIPLIERS:
-            number = float(money[:-1])
-            return number * MULTIPLIERS[last_char]
+        if (last_char := money[-1].upper()) in Multiplier.__members__:
+            return float(money[:-1]) * Multiplier[last_char].value
         else:
             return float(money)
     except (ValueError, IndexError) as e:
         print(f"Error processing pair: {e}")
-        return 0
+        return 0.0
 
 
-def number_to_string(number: int) -> str:
-    """Convert a number to a formatted money string using the same multipliers"""
+def number_to_string(number: float) -> str:
+    """Convert a number to a formatted money string using the same multipliers."""
 
-    for suffix, value in list(MULTIPLIERS.items())[::-1]:
-        if number >= value:
-            return f"{number / value:.2f}{suffix}"
-
+    for suffix, multiplier in Multiplier.__members__.items():
+        if number >= multiplier.value:
+            return f"{number / multiplier.value:.2f}{suffix}"
     return str(number)
 
 
 def as_number(comma_number: str) -> int:
-    """Convert a comma-separated number string to an integer"""
+    """Convert a comma-separated number string to an integer."""
 
     return int(comma_number.replace(",", "").strip())
 
 
 def get_solana_address(dex_solana_link: str, sep="https://dexscreener.com/solana/") -> str:
-    """Extract Solana address from DEX Solana link"""
+    """Extract Solana address from DEX Solana link."""
 
     return dex_solana_link.split(sep, 1)[-1]
 
 
-def avoid_tg_rate_limit(seconds=2):
-    """Avoid hitting Telegram's rate limits"""
+def avoid_tg_rate_limit(seconds: int = 2):
+    """Avoid hitting Telegram's rate limits."""
 
     sleep(seconds)
+
+
+def wait_for_url_change(sb, keyword, timeout, wait_time=.5, error_type="print", error_message=None):
+    """
+    Waits for the current URL to contain a specific keyword within a given timeout.
+
+    Args:
+        sb: The SeleniumBase object (or any object with `get_current_url()` and `sleep()` methods).
+        keyword: The keyword to look for in the URL.
+        timeout: The maximum time (in seconds) to wait for the URL change.
+        wait_time: The time (in seconds) to wait between checks.
+        error_type:
+          - "print": Prints an error message and continues. (Default)
+          - "raise": Raises a custom exception or a TimeoutError if error_message is not given.
+          - "silent" - Does nothing if timeout occurs
+        error_message: The custom error message to print or raise (optional).
+                       If not provided and error_type is "raise", a generic TimeoutError is raised.
+
+    Raises:
+        TimeoutError: If error_type is "raise" and the timeout is reached.
+        Exception: If error_type is "raise" and error_message is provided.
+    """
+
+    start_time = time()
+    while keyword not in sb.get_current_url():
+        sb.sleep(wait_time)
+        if time() - start_time > timeout:
+            if error_type == "print":
+                print(error_message or f"Timeout: URL did not change to include '{keyword}'")
+            elif error_type == "raise":
+                if error_message:
+                    raise Exception(error_message)
+                else:
+                    raise TimeoutError(f"Timeout: URL did not change to include '{keyword}'")
+            break
+
+
+def calculate_token_score(security_data: SecurityData) -> float:
+    """Calculate token security score based on various factors."""
+
+    max_score = 0
+    for risk_scoring in SCORING_CONFIG:
+        for weight in risk_scoring.weights.values():
+            max_score += abs(weight.birdeye) + abs(weight.goplus)
+
+    score = max_score
+
+    for risk_scoring in SCORING_CONFIG:
+        risk_level_data = getattr(security_data, risk_scoring.level.value)
+
+        if not risk_level_data:
+            continue
+
+        for issue, details in risk_level_data.items():
+            issue_key = issue.lower().replace(" ", "_")
+            if issue_key not in risk_scoring.weights:
+                continue
+
+            weights = risk_scoring.weights[issue_key]
+            if details.get("b"):
+                score -= abs(weights.birdeye)
+            if details.get("g"):
+                score -= abs(weights.goplus)
+
+    return max(0, min(100, score / max_score * 100))
+
+
+def format_telegram_message(data: PairData, threshold=98):
+    """Format data for a Telegram message with security score."""
+
+    security_info, score_text = "", ""
+
+    if data.security:
+        score_emoji = "🟢" if data.security.score >= threshold else "🔴"
+        score_text = f"{score_emoji} {data.security.score:.2f}%"
+
+        for risk_level in RiskLevel:
+            severity_key = risk_level.value[0]
+            if data.security.__dict__.get(severity_key):
+                security_info += f"\n{risk_level.emoji} <b>{risk_level.label} Security Risks:</b> {risk_level.emoji}"
+                for issue, details in data.security.__dict__[severity_key].items():
+                    for source_key, source_name in [("b", "BirdEye"), ("g", "GoPlus")]:
+                        if details.get(source_key):
+                            security_info += f"\n<u>{source_name}</u> - {issue}: {details[source_key]}"
+
+    def format_change(value):
+        return f"{number_to_string(value)}%" if value is not None else "-"
+
+    change_lines = [
+        f"🕛 <b>{time_frame.label} Change:</b> <i>{format_change(getattr(data, time_frame.attribute, None))}</i>"
+        for time_frame in TimeFrame
+    ]
+
+    return f"""
+🌱 <b>Token:</b> <a href="https://dexscreener.com/solana/{data.address}">{data.token}: {data.description}</a>
+💵 <b>Price:</b> ${number_to_string(data.price)}
+🕛 <b>Age:</b> {from_minutes(data.age)}
+🛒 <b>Sells:</b> {data.sells}
+📊 <b>Volume:</b> ${number_to_string(data.volume)}
+👥 <b>Makers:</b> {data.makers}
+{"\n".join(change_lines)}
+💧 <b>Liquidity:</b> ${number_to_string(data.liquidity)}
+💰 <b>Market Cap:</b> ${number_to_string(data.market_cap)}
+
+📊 <b>Models Score:</b>
+Model 1: {score_text}
+Model 2: <i>currently not working</i>
+{security_info}
+"""
