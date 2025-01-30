@@ -114,12 +114,12 @@ def should_post_token(security_data: SecurityData) -> bool:
 if __name__ == "__main__":
     """Run a test to check security risks for a token."""
 
-    with SB(uc=True, headless=False, user_data_dir=user_data_dir) as sb:
+    with SB(uc=True, headless=False, user_data_dir=user_data_dir) as sb_main:
         try:
             test_token = "SOL/USDC"
-            security_info = check_security_risks(sb, test_token)
+            security_info = check_security_risks(sb_main, test_token)
             print(f"Security info for {test_token}:")
             print(security_info)
             print(f"Should post: {should_post_token(security_info)}")
-        except Exception as e:
-            print(f"Error when checking security: {str(e)}")
+        except Exception as exception:
+            print(f"Error when checking security: {str(exception)}")
