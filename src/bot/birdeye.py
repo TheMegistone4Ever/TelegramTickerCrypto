@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from seleniumbase import SB
 
-from bot.utils import wait_for_url_change
+from bot.utils import wait_for_url_change, define_risk_level
 from models import SecurityData, RiskLevel
 
 dotenv_path = Path(r"..\..\.env")
@@ -63,19 +63,11 @@ def check_security_risks(sb, token_name: str, url="https://www.birdeye.so/") -> 
         risk_sections = security_content.find_elements(By.CLASS_NAME, "divide-y")
 
         for section in risk_sections:
-            if "hidden" in section.get_attribute("class"):
+            if "hidden" in (border_class := section.get_attribute("class")):
                 continue
 
-            border_class = section.get_attribute("class")
-            if "border-l-destructive" in border_class:
-                risk_level = RiskLevel.CRITICAL
-            elif "border-l-primary" in border_class:
-                risk_level = RiskLevel.HIGH
-            elif "border-l-pending" in border_class:
-                risk_level = RiskLevel.MEDIUM
-            elif "border-l-neutral-700" in border_class:
-                risk_level = RiskLevel.LOW
-            else:
+            risk_level = define_risk_level(border_class)
+            if not risk_level:
                 continue
 
             grid_items = section.find_elements(By.CLASS_NAME, "grid-cols-3")

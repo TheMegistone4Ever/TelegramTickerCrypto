@@ -90,6 +90,18 @@ def avoid_tg_rate_limit(seconds: int = 2):
     sleep(seconds)
 
 
+def define_risk_level(border_class: str) -> Optional[RiskLevel]:
+    if "border-l-destructive" in border_class:
+        return RiskLevel.CRITICAL
+    elif "border-l-primary" in border_class:
+        return RiskLevel.HIGH
+    elif "border-l-pending" in border_class:
+        return RiskLevel.MEDIUM
+    elif "border-l-neutral-700" in border_class:
+        return RiskLevel.LOW
+    return None
+
+
 def wait_for_url_change(sb, keyword, timeout, wait_time=.5, error_type="print", error_message=None):
     """
     Waits for the current URL to contain a specific keyword within a given timeout.
