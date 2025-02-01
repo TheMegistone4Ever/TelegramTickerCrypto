@@ -9,7 +9,7 @@ from telebot import TeleBot
 
 from birdeye import check_security_risks, should_post_token
 from models import PairData
-from utils import (transform_token, string_to_number, avoid_tg_rate_limit, as_number, get_solana_address, to_minutes,
+from utils import (transform_token, string_to_number, as_number, get_solana_address, to_minutes,
                    wait_for_url_change, calculate_token_score, format_telegram_message)
 
 dotenv_path = Path(r"..\..\.env")
@@ -79,7 +79,6 @@ def main():
                 if should_post_token(pair_data.security):
                     msg = format_telegram_message(pair_data)
                     bot.send_message(channel_id, msg, parse_mode="HTML")
-                    avoid_tg_rate_limit()
         finally:
             pass
 
