@@ -1,5 +1,5 @@
 from re import search, DOTALL
-from time import sleep, time
+from time import time
 from typing import Optional, Tuple
 
 from bot.models import Multiplier
@@ -60,7 +60,7 @@ def string_to_number(money: str) -> float:
             return float(money)
     except (ValueError, IndexError) as e:
         print(f"Error processing pair: {e}")
-        return 0.0
+        return .0
 
 
 def number_to_string(number: float) -> str:
@@ -82,12 +82,6 @@ def get_solana_address(dex_solana_link: str, sep="https://dexscreener.com/solana
     """Extract Solana address from DEX Solana link."""
 
     return dex_solana_link.split(sep, 1)[-1]
-
-
-def avoid_tg_rate_limit(seconds: int = 2):
-    """Avoid hitting Telegram's rate limits."""
-
-    sleep(seconds)
 
 
 def define_risk_level(border_class: str) -> Optional[RiskLevel]:
@@ -148,21 +142,11 @@ def calculate_token_score(security_data: SecurityData) -> float:
     score = max_score
 
     for risk_scoring in SCORING_CONFIG:
-        risk_level_data = getattr(security_data, risk_scoring.level.value)
-
-        if not risk_level_data:
+        if not (severity_data := getattr(security_data, risk_scoring.level.value)):
             continue
 
-        for issue, details in risk_level_data.items():
-            issue_key = issue.lower().replace(" ", "_")
-            if issue_key not in risk_scoring.weights:
-                continue
-
-            weights = risk_scoring.weights[issue_key]
-            if details.get("b"):
-                score -= abs(weights.birdeye)
-            if details.get("g"):
-                score -= abs(weights.goplus)
+        for issue, details in severity_data.items():
+            score += sum(getattr(risk_scoring.weights.get(issue), key, 0) for key, value in details.items() if value)
 
     return max(0, min(100, score / max_score * 100))
 
@@ -177,13 +161,12 @@ def format_telegram_message(data: PairData, threshold=98):
         score_text = f"{score_emoji} {data.security.score:.2f}%"
 
         for risk_level in RiskLevel:
-            severity_key = risk_level.value[0]
-            if data.security.__dict__.get(severity_key):
+            if severity_data := getattr(data.security, risk_level.value):
                 security_info += f"\n{risk_level.emoji} <b>{risk_level.label} Security Risks:</b> {risk_level.emoji}"
-                for issue, details in data.security.__dict__[severity_key].items():
-                    for source_key, source_name in [("b", "BirdEye"), ("g", "GoPlus")]:
-                        if details.get(source_key):
-                            security_info += f"\n<u>{source_name}</u> - {issue}: {details[source_key]}"
+                for issue, details in severity_data.items():
+                    for platform, description in details.items():
+                        if description:
+                            security_info += f"\n<u>{platform.capitalize()}</u> - {issue.capitalize()}: {description}"
 
     def format_change(value):
         return f"{number_to_string(value)}%" if value is not None else "-"
