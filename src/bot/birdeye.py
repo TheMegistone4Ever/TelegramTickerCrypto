@@ -83,8 +83,8 @@ def check_security_risks(sb, token_name: str, url="https://www.birdeye.so/") -> 
                 goplus_data = cells[1].text if cells[1].text != "N/A" else None
 
                 security_data[risk_level.value][title] = {
-                    "b": birdeye_data,
-                    "g": goplus_data
+                    "birdeye": birdeye_data,
+                    "goplus": goplus_data
                 }
 
         return SecurityData(**security_data)
