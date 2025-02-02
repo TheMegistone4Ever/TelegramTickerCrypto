@@ -8,6 +8,7 @@ from seleniumbase import SB
 from telebot import TeleBot
 
 from birdeye import check_security_risks, should_post_token
+from gemini.assistant import CryptoAIProcessor
 from models import PairData
 from utils import (transform_token, string_to_number, as_number, get_solana_address, to_minutes,
                    wait_for_url_change, calculate_token_score, format_telegram_message)
@@ -17,7 +18,13 @@ load_dotenv(dotenv_path=dotenv_path)
 BOT_TOKEN = getenv("BOT_TOKEN")
 channel_id = getenv("CHANNEL_ID")
 user_data_dir = getenv("USER_DATA_DIR")
+gemini_api_key = getenv("GEMINI_API_KEY")
 bot = TeleBot(BOT_TOKEN)
+crypto_ai = CryptoAIProcessor(
+    model_name="models/gemini-2.0-flash-thinking-exp-01-21",
+    api_key=gemini_api_key,
+    database_path="crypto_pairs.csv"
+)
 MAX_ON_PAGE = 100
 
 
@@ -71,6 +78,9 @@ def main():
     with SB(uc=True, headless=False) as sb:
         try:
             pairs_data = scrape_dexscreener_data(sb)
+
+            crypto_ai.save_pair_data(pairs_data)
+
             for pair_data in pairs_data:
                 security_data = check_security_risks(sb, pair_data.token)
                 score = calculate_token_score(security_data)
@@ -83,26 +93,30 @@ def main():
             pass
 
 
+@bot.message_handler(commands=["start", "help", "info", "trends", "support"])
+def handle_commands(message):
+    """Handle bot commands using AI assistant"""
+    command = message.text[1:]  # Remove the '/' prefix
+    response = crypto_ai.handle_command(command)
+    bot.send_message(message.chat.id, response, parse_mode="HTML")
+
+
+@bot.message_handler()
+def handle_messages(message):
+    """Handle messages with two-stage processing"""
+    technical_output, user_response = crypto_ai.process_message(message.text)
+
+    if technical_output:
+        print(f"{technical_output = }")
+
+    if user_response:
+        print(f"{user_response = }")
+        bot.reply_to(message, user_response)
+
+
 if __name__ == "__main__":
     """Run the bot."""
 
-    main()
-
-
-    @bot.message_handler(commands=["start"])
-    def tg_start(message):
-        print(message.chat.id)
-        bot.send_message(message.chat.id, "ІДІ")
-
-
-    @bot.message_handler(commands=["help"])
-    def tg_help(message):
-        bot.send_message(message.chat.id, "<u>НЕ ІДІ</u>", parse_mode="HTML")
-
-
-    @bot.message_handler()
-    def tg_echo(message):
-        bot.reply_to(message, message.text)
-
-
+    print("Starting bot...")
+    # main()
     bot.polling(none_stop=True)
