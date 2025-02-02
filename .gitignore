@@ -1,5 +1,7 @@
 # User-specific files
 downloaded_files/
+data/
+models/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

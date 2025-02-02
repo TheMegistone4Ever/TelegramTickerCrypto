@@ -96,7 +96,7 @@ def main():
 @bot.message_handler(commands=["start", "help", "info", "trends", "support"])
 def handle_commands(message):
     """Handle bot commands using AI assistant"""
-    command = message.text[1:]  # Remove the '/' prefix
+    command = message.text[1:]
     response = crypto_ai.handle_command(command)
     bot.send_message(message.chat.id, response, parse_mode="HTML")
 

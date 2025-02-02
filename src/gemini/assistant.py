@@ -4,10 +4,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, List, Tuple
 
-import google.generativeai as genai
 import pandas as pd
 
 from bot.models import PairData
+from gemini.classifier_manager import ClassifierManager
+from gemini.custom_model import CustomModel
 
 
 @dataclass
@@ -21,24 +22,21 @@ class CryptoAIProcessor:
             self,
             model_name: str,
             api_key: str,
-            database_path: str = "crypto_pairs.csv",
+            database_path: str = "data/crypto_pairs.csv",
+            classifier_model_path: str = None
     ):
         self.database_path = Path(database_path)
         self.conversation = ConversationState()
+        self.classifier_manager = ClassifierManager(classifier_model_path)
 
-        # Configure the technical model
-        genai.configure(api_key=api_key)
-
-        self.technical_model = genai.GenerativeModel(
-            model_name,
-            system_instruction=[
-                """
+        technical_system_instruction = """
                 You are a cryptocurrency data analyzer. Follow these steps EXACTLY:
                 If the message is the start of a conversation, output `<conversation>` on its own line.
                 If the message is the end of a conversation, output `<conversation/>` on its own line.
                 Identify any cryptocurrency mentions in the user message. For each one, output a tag exactly as `<coin name=\"SYMBOL/SOL\">` (append `/SOL` if missing).
-                Output a single technical sentence in the following format:
-                   `User asks about [coin tags] and [query summary]`
+                Output a single technical sentence in the following format (for example):
+                   `User asks about [coin tags] and [query summary] in [language]`
+                Or any other relevant information if needed.
                 Do not include any additional text, explanations, markdown formatting, or line breaks (except for the `<conversation>` and `<conversation/>` tags if needed).
                 Examples:
                 Input: 'Привіт! Які перспективи у BTC?'
@@ -47,18 +45,13 @@ class CryptoAIProcessor:
                 User asks about <coin name=\"BTC/SOL\"> and prospects in Ukrainian
                 Input: 'Is ETH a good investment?'
                 Output:
-                User asks about <coin name=\"ETH/SOL\"> and investment
+                User asks about <coin name=\"ETH/SOL\"> and investment in English
                 Input: 'Bye'
                 Output:
                 <conversation/>
                 """
-            ],
-        )
 
-        self.user_model = genai.GenerativeModel(
-            model_name,
-            system_instruction=[
-                """
+        user_system_instruction = """
                 You are a multilingual crypto assistant. Your response must be in the user's language.
                 Follow this template exactly:
                 Acknowledge the coin(s) from the provided info.
@@ -70,13 +63,14 @@ class CryptoAIProcessor:
                 Use a friendly tone, as if you were talking to a friend.
                 Include an emoji if the user's message contained one.
                 Do not mention tags, technical processing details, or any model limitations.
+                Answer only based on the provided data, without additional research.
                 Make sure your answer is tailored to the user's language and remains strictly within these guidelines.
                 """
-            ],
-        )
+
+        self.technical_model = CustomModel(model_name, api_key, technical_system_instruction)
+        self.user_model = CustomModel(model_name, api_key, user_system_instruction)
 
     def save_pair_data(self, pair_data: List[PairData]):
-        """Save pair data to CSV database"""
         fieldnames = [
             "token",
             "description",
@@ -113,7 +107,6 @@ class CryptoAIProcessor:
                 )
 
     def _get_coin_data(self, coin_name: str) -> Optional[dict]:
-        """Get raw coin data from database"""
         try:
             df = pd.read_csv(self.database_path)
             coin_data = df[df["token"].str.lower() == coin_name.lower()]
@@ -124,51 +117,34 @@ class CryptoAIProcessor:
             return None
 
     def _should_respond(self, message: str) -> bool:
-        """Check if message requires a response"""
-        triggers = ["?", "ВОПРОС", "ПИТАННЯ", "QUESTION"]
-        return any(trigger in message.upper() for trigger in triggers)
+        return self.classifier_manager.is_question(message)
 
     def _is_farewell(self, message: str) -> bool:
-        """Check for conversation end"""
-        farewells = [
-            "bye",
-            "goodbye",
-            "пока",
-            "до свидания",
-            "бувай",
-            "до побачення",
-        ]
-        return any(farewell in message.lower() for farewell in farewells)
+        return self.classifier_manager.is_farewell(message)
 
     def process_message(self, message: str) -> Tuple[str, str]:
-        """Two-stage message processing"""
-        # Stage 1: Technical Processing
         technical_response_parts = []
 
-        # Handle conversation start
-        if (
-                self._should_respond(message)
-                and not self.conversation.conversation_started
-        ):
+        if self._should_respond(message) and not self.conversation.conversation_started:
             self.conversation.conversation_started = True
             self.conversation.is_active = True
+            technical_response_parts.append("<conversation>")
 
-        # Handle conversation end
-        if (
-                self._is_farewell(message)
-                and self.conversation.conversation_started
-        ):
+        if self._is_farewell(message) and self.conversation.conversation_started:
             self.conversation.is_active = False
             self.conversation.conversation_started = False
+            technical_response_parts.append("<conversation/>")
+            self.technical_model.clear_memory()
+            self.user_model.clear_memory()
 
         if self.conversation.is_active:
             technical_response = self.technical_model.generate_content(message)
-            technical_response_parts.append(technical_response.text)
+            technical_response_parts.append(technical_response)
 
         technical_output = "\n".join(technical_response_parts)
         print(f"Preprocessed {technical_output = }")
 
-        if not self.conversation.is_active:
+        if not self.conversation.is_active and technical_output == "<conversation/>":
             return technical_output, ""
 
         coin_regex = re.compile(r"<coin name=\"(?P<coin_name>.*?)\">")
@@ -180,27 +156,16 @@ class CryptoAIProcessor:
                     match.group(0), str(coin_data)
                 )
 
-        # Stage 2: User-Facing Processing
         user_response = ""
         if self.conversation.is_active or technical_output:
             user_context = f"Processed message: {technical_output}"
             user_response = self.user_model.generate_content(
-                [
-                    ("What is the style of this message: " + message),
-                    "The style is "
-                    + (
-                        "casual"
-                        if "!" in message or "?" in message
-                        else "formal"
-                    ),
-                    user_context,
-                ]
-            ).text
+                f"Style: {'casual' if '!' in message or '?' in message else 'formal'}\n{user_context}"
+            )
 
         return technical_output, user_response
 
     def handle_command(self, command: str) -> str:
-        """Handle bot commands with user-friendly responses"""
         commands = {
             "start": "Welcome to CryptoTicker! I'm your crypto assistant. Ask me questions about cryptocurrencies or specific coins in our database. 🚀",
             "help": """Here's how I can help:
