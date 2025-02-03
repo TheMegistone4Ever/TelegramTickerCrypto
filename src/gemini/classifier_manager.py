@@ -21,7 +21,12 @@ class ClassifierManager:
 
     def _load_or_train(self):
         if self.model_path.exists():
-            self._load_models()
+            try:
+                self._load_models()
+            except Exception as e:
+                print(f"Error loading model {e}. Retraining...")
+                self.model_path.unlink(missing_ok=True)  # Remove corrupted file
+                self._train_and_save_models()
         else:
             self._train_and_save_models()
 
@@ -33,7 +38,7 @@ class ClassifierManager:
         download("nps_chat")
         download("punkt")
 
-        posts = nps_chat.xml_posts()[:10000]
+        posts = nps_chat.xml_posts()
 
         feature_sets = [(dialogue_act_features(post.text), post.get("class"))
                         for post in posts]
