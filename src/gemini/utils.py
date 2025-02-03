@@ -19,8 +19,7 @@ def translate_text(text: str) -> str:
             }
         )
         data = response.json()
-        print(data)
-        return data[0][0][0]
+        return "\n".join(line[0] for line in data[0])
     except Exception as e:
         print(f"Translation error: {e}")
         return text
