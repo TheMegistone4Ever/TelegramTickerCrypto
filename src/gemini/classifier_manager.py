@@ -30,12 +30,12 @@ class ClassifierManager:
             self.classifier = load(f)
 
     def _train_and_save_models(self):
-        download('nps_chat')
-        download('punkt')
+        download("nps_chat")
+        download("punkt")
 
         posts = nps_chat.xml_posts()[:10000]
 
-        feature_sets = [(dialogue_act_features(post.text), post.get('class'))
+        feature_sets = [(dialogue_act_features(post.text), post.get("class"))
                         for post in posts]
         size = int(len(feature_sets) * 0.1)
         train_set, test_set = feature_sets[size:], feature_sets[:size]
@@ -43,7 +43,6 @@ class ClassifierManager:
         self.classifier = NaiveBayesClassifier.train(train_set)
 
         self.model_path.parent.mkdir(parents=True, exist_ok=True)
-        # Expected type 'SupportsWrite[bytes]', got 'BinaryIO' instead
         with open(self.model_path, "wb") as f:
             dump(self.classifier, f)  # type: ignore
 

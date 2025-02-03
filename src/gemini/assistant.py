@@ -40,20 +40,20 @@ class CryptoAIProcessor:
                 Or any other relevant information if needed.
                 Do not include any additional text, explanations, markdown formatting, or line breaks (except for the `<conversation>` and `<conversation/>` tags if needed).
                 Examples:
-                Input: 'Привіт! Які перспективи у BTC?'
+                Input: "Привіт! Які перспективи у BTC?"
                 Output:
                 <conversation>
                 User asks about <coin name=\"BTC/SOL\"> and prospects in Ukrainian
-                Input: 'Is ETH a good investment?'
+                Input: "Is ETH a good investment?"
                 Output:
                 User asks about <coin name=\"ETH/SOL\"> and investment in English
-                Input: 'Bye'
+                Input: "Bye"
                 Output:
                 <conversation/>
                 """
 
         user_system_instruction = """
-                You are a multilingual crypto assistant. Your response must be in the user's language.
+                You are a multilingual crypto assistant. Your response must be in the user"s language.
                 Follow this template exactly:
                 Acknowledge the coin(s) from the provided info.
                 Provide key metrics from the database (for example, trading volume, volatility, liquidity).
@@ -62,10 +62,10 @@ class CryptoAIProcessor:
                 Style guidelines:
                 Limit your response to a maximum of 3 sentences, ensuring it is concise yet informative.
                 Use a friendly tone, as if you were talking to a friend.
-                Include an emoji if the user's message contained one.
+                Include an emoji if the user"s message contained one.
                 Do not mention tags, technical processing details, or any model limitations.
                 Answer only based on the provided data, without additional research.
-                Make sure your answer is tailored to the user's language and remains strictly within these guidelines.
+                Make sure your answer is tailored to the user"s language and remains strictly within these guidelines.
                 """
 
         self.technical_model = CustomModel(model_name, api_key, technical_system_instruction)
@@ -86,7 +86,6 @@ class CryptoAIProcessor:
 
         mode = "a" if self.database_path.exists() else "w"
         with open(self.database_path, mode, newline="", encoding="utf-8") as f:
-            # Expected type 'SupportsWrite[str]', got 'TextIO' instead
             writer = csv.DictWriter(f, fieldnames=fieldnames)  # type: ignore
             if mode == "w":
                 writer.writeheader()
@@ -155,7 +154,7 @@ class CryptoAIProcessor:
         if self.conversation.is_active or technical_output:
             user_context = f"Processed message: {technical_output}"
             user_response = self.user_model.generate_content(
-                f"Style: {'casual' if '!' in message or '?' in message else 'formal'}\n{user_context}"
+                f"Style: {"casual" if "!" in message or "?" in message else "formal"}\n{user_context}"
             )
 
         return technical_output, user_response

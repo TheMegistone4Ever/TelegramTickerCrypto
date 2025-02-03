@@ -8,16 +8,15 @@ def translate_text(text: str) -> str:
     """Synchronous translation using requests"""
 
     try:
-        params = {
-            'client': 'gtx',
-            'sl': 'auto',
-            'tl': 'en',
-            'dt': 't',
-            'q': text
-        }
         response = get(
-            'https://translate.googleapis.com/translate_a/single',
-            params=params
+            "https://translate.googleapis.com/translate_a/single",
+            params={
+                "client": "gtx",
+                "sl": "auto",
+                "tl": "en",
+                "dt": "t",
+                "q": text
+            }
         )
         data = response.json()
         print(data)
@@ -30,4 +29,4 @@ def translate_text(text: str) -> str:
 def dialogue_act_features(post: str) -> Dict[str, bool]:
     """Extract features from a post"""
 
-    return {f'contains({word.lower()})': True for word in word_tokenize(post)}
+    return {f"contains({word.lower()})": True for word in word_tokenize(post)}

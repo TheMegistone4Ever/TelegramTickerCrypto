@@ -122,12 +122,12 @@ def wait_for_url_change(sb, keyword, timeout, wait_time=.5, error_type="print", 
         sb.sleep(wait_time)
         if time() - start_time > timeout:
             if error_type == "print":
-                print(error_message or f"Timeout: URL did not change to include '{keyword}'")
+                print(error_message or f"Timeout: URL did not change to include \"{keyword}\"")
             elif error_type == "raise":
                 if error_message:
                     raise Exception(error_message)
                 else:
-                    raise TimeoutError(f"Timeout: URL did not change to include '{keyword}'")
+                    raise TimeoutError(f"Timeout: URL did not change to include \"{keyword}\"")
             break
 
 
@@ -197,7 +197,7 @@ Model 2: <i>currently not working</i>
 def handle_command(command: str) -> str:
     commands = {
         "start": "Welcome to CryptoTicker! I'm your crypto assistant. Ask me questions about cryptocurrencies or specific coins in our database. 🚀",
-        "help": """Here's how I can help:
+        "help": """Here"s how I can help:
 - Ask about specific coins
 - Get market information
 - Check trending cryptocurrencies

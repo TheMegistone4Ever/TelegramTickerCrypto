@@ -22,7 +22,7 @@ def check_security_risks(sb, token_name: str, url="https://www.birdeye.so/") -> 
     try:
         sb.driver.get(url)
 
-        sb.driver.execute_script("document.body.style.zoom='50%'")
+        sb.driver.execute_script("document.body.style.zoom=\"50%\"")
         sb.driver.set_window_size(1920, 1080)
 
         sb.click(r"div.w-full.bg-transparent > span")
@@ -51,7 +51,8 @@ def check_security_risks(sb, token_name: str, url="https://www.birdeye.so/") -> 
         security_content = sb.wait_for_element("div.mt-4.space-y-1")
 
         sb.driver.execute_script(
-            "arguments[0].scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});", security_content)
+            "arguments[0].scrollIntoView({behavior: \"smooth\", block: \"center\", inline: \"center\"});",
+            security_content)
 
         security_data: Dict[str, Dict[str, Dict[str, str]]] = {
             RiskLevel.CRITICAL.value[0]: {},
