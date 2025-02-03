@@ -1,5 +1,6 @@
 import csv
 import re
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Tuple, Set
@@ -24,7 +25,7 @@ class CryptoAIProcessor:
             model_name: str,
             api_key: str,
             database_path: str = "data/crypto_pairs.csv",
-            classifier_model_path: str = None
+            classifier_model_path: Path = Path("models") / "classifier.pickle",
     ):
         self.database_path = Path(database_path)
         self.conversation = ConversationState()
@@ -53,19 +54,19 @@ class CryptoAIProcessor:
                 """
 
         user_system_instruction = """
-                You are a multilingual crypto assistant. Your response must be in the user"s language.
+                You are a multilingual crypto assistant. Your response must be in the user's language.
                 Follow this template exactly:
                 Acknowledge the coin(s) from the provided info.
-                Provide key metrics from the database (for example, trading volume, volatility, liquidity).
+                Provide key metrics from the database.
                 Include a concise risk/reward analysis.
-                End with a neutral recommendation (for example, advise to diversify or exercise caution).
+                End with a neutral recommendation.
                 Style guidelines:
-                Limit your response to a maximum of 3 sentences, ensuring it is concise yet informative.
+                Limit your response to a maximum of 5 sentences, ensuring it is concise yet informative.
                 Use a friendly tone, as if you were talking to a friend.
-                Include an emoji if the user"s message contained one.
+                Include an emoji if the user's message contained one.
                 Do not mention tags, technical processing details, or any model limitations.
                 Answer only based on the provided data, without additional research.
-                Make sure your answer is tailored to the user"s language and remains strictly within these guidelines.
+                Make sure your answer is tailored to the user's language and remains strictly within these guidelines.
                 """
 
         self.technical_model = CustomModel(model_name, api_key, technical_system_instruction)
@@ -118,7 +119,7 @@ class CryptoAIProcessor:
             return None
 
     def process_message(self, message: str) -> Tuple[str, str]:
-        technical_response_parts = []
+        technical_response_parts = deque()
         translated_message = translate_text(message)
 
         if (self.classifier_manager.is_types(translated_message, ["whQuestion", "ynQuestion"], True)
@@ -131,7 +132,7 @@ class CryptoAIProcessor:
                 and self.conversation.conversation_started):
             self.conversation.is_active = False
             self.conversation.conversation_started = False
-            technical_response_parts.append("<conversation/>")
+            technical_response_parts.appendleft("<conversation/>")
             self.technical_model.clear_memory()
             self.user_model.clear_memory()
 
@@ -139,7 +140,7 @@ class CryptoAIProcessor:
             technical_response = self.technical_model.generate_content(message)
             technical_response_parts.append(technical_response)
 
-        technical_output = "\n".join(technical_response_parts)
+        technical_output = " ".join(technical_response_parts)
         print(f"Preprocessed {technical_output = }")
 
         if not self.conversation.is_active and technical_output == "<conversation/>":
