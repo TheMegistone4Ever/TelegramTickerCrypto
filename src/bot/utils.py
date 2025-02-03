@@ -192,3 +192,21 @@ Model 1: {score_text}
 Model 2: <i>currently not working</i>
 {security_info}
 """
+
+
+def handle_command(command: str) -> str:
+    commands = {
+        "start": "Welcome to CryptoTicker! I'm your crypto assistant. Ask me questions about cryptocurrencies or specific coins in our database. 🚀",
+        "help": """Here's how I can help:
+- Ask about specific coins
+- Get market information
+- Check trending cryptocurrencies
+- Get real-time updates
+Just ask your question! 📊""",
+        "info": "I'm here to provide real-time crypto information. What would you like to know?",
+        "trends": "Let me show you what's trending in the crypto world right now.",
+        "support": "Need help? Just ask your question and I'll assist you!",
+    }
+    return commands.get(
+        command, "Unknown command. Try /help to see what I can do!"
+    )

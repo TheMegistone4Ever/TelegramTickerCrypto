@@ -11,7 +11,7 @@ from birdeye import check_security_risks, should_post_token
 from gemini.assistant import CryptoAIProcessor
 from models import PairData
 from utils import (transform_token, string_to_number, as_number, get_solana_address, to_minutes,
-                   wait_for_url_change, calculate_token_score, format_telegram_message)
+                   wait_for_url_change, calculate_token_score, format_telegram_message, handle_command)
 
 dotenv_path = Path(r"..\..\.env")
 load_dotenv(dotenv_path=dotenv_path)
@@ -23,7 +23,7 @@ bot = TeleBot(BOT_TOKEN)
 crypto_ai = CryptoAIProcessor(
     model_name="models/gemini-2.0-flash-thinking-exp-01-21",
     api_key=gemini_api_key,
-    database_path="crypto_pairs.csv"
+    database_path="data/crypto_pairs.csv"
 )
 MAX_ON_PAGE = 100
 
@@ -97,7 +97,7 @@ def main():
 def handle_commands(message):
     """Handle bot commands using AI assistant"""
     command = message.text[1:]
-    response = crypto_ai.handle_command(command)
+    response = handle_command(command)
     bot.send_message(message.chat.id, response, parse_mode="HTML")
 
 

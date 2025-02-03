@@ -2,13 +2,14 @@ import csv
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import Optional, Tuple, Set
 
 import pandas as pd
 
 from bot.models import PairData
 from gemini.classifier_manager import ClassifierManager
 from gemini.custom_model import CustomModel
+from gemini.utils import translate_text
 
 
 @dataclass
@@ -70,7 +71,7 @@ class CryptoAIProcessor:
         self.technical_model = CustomModel(model_name, api_key, technical_system_instruction)
         self.user_model = CustomModel(model_name, api_key, user_system_instruction)
 
-    def save_pair_data(self, pair_data: List[PairData]):
+    def save_pair_data(self, pair_data: Set[PairData]):
         fieldnames = [
             "token",
             "description",
@@ -85,7 +86,8 @@ class CryptoAIProcessor:
 
         mode = "a" if self.database_path.exists() else "w"
         with open(self.database_path, mode, newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            # Expected type 'SupportsWrite[str]', got 'TextIO' instead
+            writer = csv.DictWriter(f, fieldnames=fieldnames)  # type: ignore
             if mode == "w":
                 writer.writeheader()
 
@@ -116,21 +118,18 @@ class CryptoAIProcessor:
         except (FileNotFoundError, IndexError):
             return None
 
-    def _should_respond(self, message: str) -> bool:
-        return self.classifier_manager.is_question(message)
-
-    def _is_farewell(self, message: str) -> bool:
-        return self.classifier_manager.is_farewell(message)
-
     def process_message(self, message: str) -> Tuple[str, str]:
         technical_response_parts = []
+        translated_message = translate_text(message)
 
-        if self._should_respond(message) and not self.conversation.conversation_started:
+        if (self.classifier_manager.is_types(translated_message, ["whQuestion", "ynQuestion"], True)
+                and not self.conversation.conversation_started):
             self.conversation.conversation_started = True
             self.conversation.is_active = True
             technical_response_parts.append("<conversation>")
 
-        if self._is_farewell(message) and self.conversation.conversation_started:
+        if (self.classifier_manager.is_types(translated_message, ["Bye"], True)
+                and self.conversation.conversation_started):
             self.conversation.is_active = False
             self.conversation.conversation_started = False
             technical_response_parts.append("<conversation/>")
@@ -149,12 +148,8 @@ class CryptoAIProcessor:
 
         coin_regex = re.compile(r"<coin name=\"(?P<coin_name>.*?)\">")
         for match in coin_regex.finditer(technical_output):
-            coin_name = match.group("coin_name")
-            coin_data = self._get_coin_data(coin_name)
-            if coin_data:
-                technical_output = technical_output.replace(
-                    match.group(0), str(coin_data)
-                )
+            if coin_data := self._get_coin_data(match.group("coin_name")):
+                technical_output = technical_output.replace(match.group(0), str(coin_data))
 
         user_response = ""
         if self.conversation.is_active or technical_output:
@@ -164,20 +159,3 @@ class CryptoAIProcessor:
             )
 
         return technical_output, user_response
-
-    def handle_command(self, command: str) -> str:
-        commands = {
-            "start": "Welcome to CryptoTicker! I'm your crypto assistant. Ask me questions about cryptocurrencies or specific coins in our database. 🚀",
-            "help": """Here's how I can help:
-- Ask about specific coins
-- Get market information
-- Check trending cryptocurrencies
-- Get real-time updates
-Just ask your question! 📊""",
-            "info": "I'm here to provide real-time crypto information. What would you like to know?",
-            "trends": "Let me show you what's trending in the crypto world right now.",
-            "support": "Need help? Just ask your question and I'll assist you!",
-        }
-        return commands.get(
-            command, "Unknown command. Try /help to see what I can do!"
-        )
