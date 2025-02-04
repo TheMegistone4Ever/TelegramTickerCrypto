@@ -37,7 +37,7 @@ class CryptoAIProcessor:
                 If the message is the end of a conversation, output `<conversation/>` on its own line.
                 Identify any cryptocurrency mentions in the user message. For each one, output a tag exactly as `<coin name=\"SYMBOL/SOL\">` (append `/SOL` if missing).
                 Output a single technical sentence in the following format (for example):
-                   `User asks about [coin tags] and [query summary] in [language]`
+                   `User asks about [[coin tags] and ...] [query summary] in [language]`
                 Or any other relevant information if needed.
                 Do not include any additional text, explanations, markdown formatting, or line breaks (except for the `<conversation>` and `<conversation/>` tags if needed).
                 Examples:
@@ -48,6 +48,12 @@ class CryptoAIProcessor:
                 Input: "Is ETH a good investment?"
                 Output:
                 User asks about <coin name=\"ETH/SOL\"> and investment in English
+                Input: "Дякую, допоможи з SHIB"
+                Output:
+                User asks about <coin name="SHIB/SOL"> in Ukrainian
+                Input: "Що таке ліквідність?"
+                Output:
+                User asks what liquidity is in Ukrainian
                 Input: "Bye"
                 Output:
                 <conversation/>
@@ -67,6 +73,10 @@ class CryptoAIProcessor:
                 Do not mention tags, technical processing details, or any model limitations.
                 Answer only based on the provided data, without additional research.
                 Make sure your answer is tailored to the user's language and remains strictly within these guidelines.
+                Examples:
+                Input:  Style: casual
+                        Processed message: <conversation> User asks about <coin name="BTC/SOL"> and prospects in Ukrainian
+                Output: Привіт! 😊 Ти питаєш про BTC/SOL? Ну, дивись... (далі по інструкції)
                 """
 
         self.technical_model = CustomModel(model_name, api_key, technical_system_instruction)
@@ -121,27 +131,31 @@ class CryptoAIProcessor:
     def process_message(self, message: str) -> Tuple[str, str]:
         technical_response_parts = deque()
         translated_message = translate_text(message)
+        print(f"Input message: {message}")
+        print(f"Translated message: {translated_message}")
 
         if (self.classifier_manager.is_types(translated_message, ["whQuestion", "ynQuestion"], True)
                 and not self.conversation.conversation_started):
             self.conversation.conversation_started = True
             self.conversation.is_active = True
-            technical_response_parts.append("<conversation>")
+            if "<conversation>" not in technical_response_parts:
+                technical_response_parts.append("<conversation>")
 
         if (self.classifier_manager.is_types(translated_message, ["Bye"], True)
                 and self.conversation.conversation_started):
             self.conversation.is_active = False
             self.conversation.conversation_started = False
-            technical_response_parts.appendleft("<conversation/>")
             self.technical_model.clear_memory()
             self.user_model.clear_memory()
+            if "<conversation/>" not in technical_response_parts:
+                technical_response_parts.append("<conversation/>")
 
         if self.conversation.is_active:
             technical_response = self.technical_model.generate_content(message)
             technical_response_parts.append(technical_response)
 
         technical_output = " ".join(technical_response_parts)
-        print(f"Preprocessed {technical_output = }")
+        print(f"Preprocessed message: {technical_output}")
 
         if not self.conversation.is_active and technical_output == "<conversation/>":
             return technical_output, ""
@@ -157,5 +171,6 @@ class CryptoAIProcessor:
             user_response = self.user_model.generate_content(
                 f"Style: {"casual" if "!" in message or "?" in message else "formal"}\n{user_context}"
             )
+            print(f"User response: {user_response}")
 
         return technical_output, user_response

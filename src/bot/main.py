@@ -106,11 +106,7 @@ def handle_messages(message):
     """Handle messages with two-stage processing"""
     technical_output, user_response = crypto_ai.process_message(message.text)
 
-    if technical_output:
-        print(f"{technical_output = }")
-
     if user_response:
-        print(f"{user_response = }")
         bot.reply_to(message, user_response)
 
 
