@@ -71,12 +71,15 @@ class CryptoAIProcessor:
                 Use a friendly tone, as if you were talking to a friend.
                 Include an emoji if the user's message contained one.
                 Do not mention tags, technical processing details, or any model limitations.
-                Answer only based on the provided data, without additional research.
+                Answer only based on the provided data, without additional research. If the coin is not found, mention this.
                 Make sure your answer is tailored to the user's language and remains strictly within these guidelines.
                 Examples:
                 Input:  Style: casual
                         Processed message: <conversation> User asks about <coin name="BTC/SOL"> and prospects in Ukrainian
                 Output: Привіт! 😊 Ти питаєш про BTC/SOL? Ну, дивись... (далі по інструкції)
+                Input:  Style: formal
+                        Processed message: <conversation> User asks about <coin name="ETH/SOL"> not found and investment in English
+                Output: Hello! 😊 You asked about ETH/SOL, but I couldn't find it. (далі по інструкції)
                 """
 
         self.technical_model = CustomModel(model_name, api_key, technical_system_instruction)
@@ -164,6 +167,8 @@ class CryptoAIProcessor:
         for match in coin_regex.finditer(technical_output):
             if coin_data := self._get_coin_data(match.group("coin_name")):
                 technical_output = technical_output.replace(match.group(0), str(coin_data))
+            else:
+                technical_output = technical_output.replace(match.group(0), f"{match.group("coin_name")} not found")
 
         user_response = ""
         if self.conversation.is_active or technical_output:
