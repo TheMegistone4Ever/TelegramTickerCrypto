@@ -1,6 +1,8 @@
 from dataclasses import replace
 from os import getenv
 from pathlib import Path
+from threading import Thread
+from time import sleep
 
 from dotenv import load_dotenv
 from selenium.webdriver.common.by import By
@@ -110,9 +112,26 @@ def handle_messages(message):
         bot.reply_to(message, user_response)
 
 
+def main_loop():
+    while True:
+        print("Running scraping and posting cycle...")
+        main()
+        print("Scraping cycle finished. Waiting for next run...")
+        sleep(30 * 60)
+
+
 if __name__ == "__main__":
     """Run the bot."""
 
-    print("Starting bot...")
-    # main()
-    bot.polling(none_stop=True)
+    print("Starting scraping and posting bot...")
+
+    channel_thread = Thread(target=main_loop, daemon=True)
+    channel_thread.start()
+
+    print("Bot is running in the background. Press Ctrl+C to stop.")
+    try:
+        bot.polling(none_stop=True)
+    except KeyboardInterrupt:
+        print("Stopping bot...")
+        bot.stop_polling()
+        print("Bot stopped.")
