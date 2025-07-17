@@ -98,6 +98,9 @@ class CryptoAIProcessor:
             "security_score",
         ]
 
+        if not self.database_path.parent.exists():
+            self.database_path.parent.mkdir(parents=True)
+
         mode = "a" if self.database_path.exists() else "w"
         with open(self.database_path, mode, newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)  # type: ignore
