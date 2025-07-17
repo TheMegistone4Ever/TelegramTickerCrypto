@@ -31,7 +31,7 @@ def check_security_risks(sb, token_name: str, url="https://www.birdeye.so/") -> 
         search_input = sb.wait_for_element("div.border-b.bg-neutral-50 input", timeout=10)
         search_input.clear()
 
-        for char in token_name.replace("/", ""):
+        for char in token_name.split("/")[0]:
             search_input.send_keys(char)
             sb.sleep(uniform(0.05, 0.1))
 
