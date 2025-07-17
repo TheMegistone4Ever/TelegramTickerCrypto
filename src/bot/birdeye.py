@@ -35,6 +35,14 @@ def check_security_risks(sb, token_name: str, url="https://www.birdeye.so/") -> 
             search_input.send_keys(char)
             sb.sleep(uniform(0.05, 0.1))
 
+        sb.wait_for_element_clickable("div.flex.items-center.justify-center.gap-4 > div > div > div", timeout=10)
+        sb.click("div.flex.items-center.justify-center.gap-4 > div > div > div")
+        sb.sleep(2)
+
+        sb.wait_for_element_clickable("div[data-value='solana']", timeout=10)
+        sb.click("div[data-value='solana']")
+        sb.sleep(2)
+
         search_input.send_keys(Keys.RETURN)
 
         wait_for_url_change(sb, "token", timeout=3)
@@ -48,6 +56,10 @@ def check_security_risks(sb, token_name: str, url="https://www.birdeye.so/") -> 
         sb.driver.get(url + "&tab=security")
 
         wait_for_url_change(sb, "security", timeout=5, error_type="raise")
+
+        sb.wait_for_element_clickable("div > div > div > div.col-span-11.py-8.lg\\:col-span-5 > div > button",
+                                      timeout=5)
+        sb.click("div > div > div > div.col-span-11.py-8.lg\\:col-span-5 > div > button")
 
         security_content = sb.wait_for_element("div.mt-4.space-y-1")
 
