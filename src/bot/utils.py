@@ -196,7 +196,8 @@ Model 2: <i>currently not working</i>
 
 def handle_command(command: str) -> str:
     commands = {
-        "start": "Welcome to CryptoTicker! I'm your crypto assistant. Ask me questions about cryptocurrencies or specific coins in our database. 🚀",
+        "start": "Welcome to CryptoTicker! I'm your crypto assistant. Ask me questions about cryptocurrencies or"
+                 " specific coins in our database. 🚀 Type /help to see what I can do.",
         "help": """Here's how I can help:
 - Ask about specific coins
 - Get market information
