@@ -174,7 +174,7 @@ class CryptoAIProcessor:
                 technical_output = technical_output.replace(match.group(0), f"{match.group("coin_name")} not found")
 
         user_response = ""
-        if self.conversation.is_active or not technical_output.startswith("<conversation/>"):
+        if self.conversation.is_active and not technical_output.startswith("<conversation/>"):
             user_context = f"Processed message: {technical_output}"
             user_response = self.user_model.generate_content(
                 f"Style: {"casual" if "!" in message or "?" in message else "formal"}\n{user_context}"
