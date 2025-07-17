@@ -1,0 +1,8 @@
+python-dotenv~=1.0.1
+selenium~=4.28.1
+seleniumbase~=4.34.4
+pyTelegramBotAPI~=4.26.0
+nltk~=3.9.1
+requests~=2.32.3
+pandas~=2.2.3
+protobuf~=5.29.3
