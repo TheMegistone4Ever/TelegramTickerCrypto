@@ -29,8 +29,9 @@ def check_security_risks(sb, token_name: str, url="https://www.birdeye.so/") -> 
         sb.sleep(2)
 
         search_input = sb.wait_for_element("div.border-b.bg-neutral-50 input", timeout=10)
+        search_input.clear()
 
-        for char in token_name:
+        for char in token_name.replace("/", ""):
             search_input.send_keys(char)
             sb.sleep(uniform(0.05, 0.1))
 
@@ -101,7 +102,7 @@ def should_post_token(security_data: SecurityData) -> bool:
     Add your specific security criteria here.
     """
 
-    return security_data.score is not None and security_data.score > 0.9
+    return security_data.score is not None and security_data.score > .9
 
 
 if __name__ == "__main__":
