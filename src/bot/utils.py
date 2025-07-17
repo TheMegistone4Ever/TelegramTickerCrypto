@@ -202,6 +202,12 @@ def handle_command(command: str) -> str:
 - Get market information
 - Check trending cryptocurrencies
 - Get real-time updates
+Available commands:
+  /start: Start the conversation
+  /help: Show this help message
+  /info: Get information about the bot
+  /trends: Show trending cryptocurrencies
+  /support: Get support or ask questions
 Just ask your question! 📊""",
         "info": "I'm here to provide real-time crypto information. What would you like to know?",
         "trends": "Let me show you what's trending in the crypto world right now.",
